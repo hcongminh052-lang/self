@@ -26,7 +26,7 @@ def keep_alive():
 
 prefix = "!"
 intents = discord.Intents.all()
-TOKEN = os.getenv["DISCORD_TOKEN"]
+TOKEN = os.getenv("DISCORD_TOKEN")
 bot = commands.Bot(command_prefix=prefix,
                    help_command=None,
                    case_insensitive=True,
