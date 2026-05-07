@@ -482,4 +482,5 @@ async def stopexp(ctx):
     farm_exp = False
     print("===== DA DUNG CAY EXP =====")
 
+keep_alive()
 bot.run(TOKEN, bot = False)
