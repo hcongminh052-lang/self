@@ -7,7 +7,7 @@ import traceback
 import discord
 from discord.ext import commands
 from keep_alive import keep_alive
-from voice_task import join_voice_channel, check_voice_status, voice_keepalive_task
+from voice_task import join_voice_channel, check_voice_status
 
 prefix = "!"
 intents = discord.Intents.all()
