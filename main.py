@@ -209,11 +209,6 @@ async def on_voice_state_update(member, before, after):
     await check_voice_status(bot, member, before, after)
 
 @bot.command()
-async def join(ctx):
-    channel = bot.get_channel(1490301863692865597)
-    await channel.connect()
-
-@bot.command()
 async def kao(ctx):
     await ctx.message.delete()
     await ctx.send("┬─┬ノ( º _ ºノ)")
