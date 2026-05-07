@@ -194,14 +194,10 @@ async def cmd(ctx):
 
 @bot.event
 async def on_ready():
-    print(f'✅ Bot {bot.user} đã sẵn sàng!')
-    
-    # 1. Vào voice ngay lập tức
-    await join_voice_channel(bot)
-    
-    # 2. Chạy vòng lặp kiểm tra định kỳ (quan trọng)
-    if not voice_keepalive_task.is_running():
-        voice_keepalive_task.start(bot)
+    print(f'✅ Bot {bot.user} đã lên sóng!')
+    # Khởi động vòng lặp kiểm tra voice nếu nó chưa chạy
+    if not voice_keepalive_loop.is_running():
+        voice_keepalive_loop.start(bot)
 
 @bot.event
 async def on_voice_state_update(member, before, after):
