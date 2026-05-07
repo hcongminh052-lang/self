@@ -1,38 +1,41 @@
 import discord
 import asyncio
+from discord.ext import tasks
 
 HUB_CHANNEL_ID = 1490301863692865597 
 
-async def join_voice_channel(bot):
+@tasks.loop(seconds=30)
+async def voice_keepalive_loop(bot):
+    if not bot.is_ready():
+        return
+
     hub_channel = bot.get_channel(HUB_CHANNEL_ID)
     if not hub_channel:
         return
 
-    # Lấy đối tượng voice_client của bot trong server này
+    # Lấy voice_client trong server của Hub
     vc = discord.utils.get(bot.voice_clients, guild=hub_channel.guild)
-    
-    # CHỈ CONNECT NẾU: Bot hoàn toàn chưa vào voice (vc is None) 
-    # HOẶC Bot đã vào nhưng bị rớt kết nối (is_connected == False)
+
+    # Nếu hoàn toàn không ở trong voice
     if vc is None or not vc.is_connected():
+        print("📡 Phát hiện Bot đứng ngoài, đang vào lại Hub...")
         try:
-            print(f"📡 Đang kết nối vào Hub...")
             await hub_channel.connect()
         except Exception as e:
-            print(f"❌ Lỗi connect: {e}")
-    else:
-        # Nếu Bot đã ở trong Voice, kiểm tra xem nó có đang ở một mình không
-        # (Phòng JTC thường tự xóa nếu chỉ có 1 mình bot sau một khoảng thời gian)
-        if len(vc.channel.members) == 1 and vc.channel.id != HUB_CHANNEL_ID:
-            print("🔄 Phòng trống, quay lại Hub để làm mới...")
-            await vc.disconnect()
+            print(f"❌ Lỗi kết nối lại: {e}")
+    
+    # Nếu đang ở một mình trong phòng JTC (thường phòng sẽ bị xóa)
+    elif len(vc.channel.members) == 1 and vc.channel.id != HUB_CHANNEL_ID:
+        print("🔄 Phòng trống, quay về Hub để tạo phòng mới...")
+        try:
+            await vc.disconnect(force=True)
             await asyncio.sleep(2)
             await hub_channel.connect()
-        else:
-            print(f"✅ Bot vẫn đang ổn định tại kênh: {vc.channel.name}")
+        except:
+            pass
 
 async def check_voice_status(bot, member, before, after):
-    # Chỉ kích hoạt lại khi chính BOT bị thoát hoàn toàn (after.channel là None)
+    # Khi bot bị văng, gọi loop kiểm tra ngay lập tức
     if member.id == bot.user.id and after.channel is None:
-        print("⚠️ Bot rớt kết nối hoàn toàn, chuẩn bị vào lại...")
-        await asyncio.sleep(3)
-        await join_voice_channel(bot)
+        await asyncio.sleep(2)
+        await voice_keepalive_loop(bot)
