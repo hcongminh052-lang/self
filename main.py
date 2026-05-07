@@ -7,6 +7,7 @@ import traceback
 import discord
 from discord.ext import commands
 from keep_alive import keep_alive
+from voice_task import join_voice_channel, check_voice_status, voice_keepalive_task
 
 prefix = "!"
 intents = discord.Intents.all()
@@ -190,6 +191,22 @@ async def cmd(ctx):
     )
 
     await ctx.send(msg)
+
+@bot.event
+async def on_ready():
+    print(f'✅ Bot {bot.user} đã sẵn sàng!')
+    
+    # 1. Vào voice ngay lập tức
+    await join_voice_channel(bot)
+    
+    # 2. Chạy vòng lặp kiểm tra định kỳ (quan trọng)
+    if not voice_keepalive_task.is_running():
+        voice_keepalive_task.start(bot)
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    # Theo dõi trạng thái voice của chính bot
+    await check_voice_status(bot, member, before, after)
 
 @bot.command()
 async def kao(ctx):
