@@ -22,7 +22,7 @@ channel_checkpoints = {}
 
 def shutdown_handler():
     print("Saving checkpoint before exit...")
-    save_checkpoints()
+    save_checkpoints(channel_checkpoints)
 
 signal.signal(signal.SIGINT, lambda s, f: shutdown_handler())
 
