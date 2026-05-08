@@ -18,7 +18,6 @@ bot = commands.Bot(command_prefix=prefix,
                    case_insensitive=True,
                    intents=intents,
                    self_bot = True)
-channel_checkpoints = {}
 
 def shutdown_handler():
     print("Saving checkpoint before exit...")
@@ -298,7 +297,7 @@ async def oldreact(ctx):
     semaphore = asyncio.Semaphore(1)
     async def limited_process(cid, eids):
         async with semaphore:
-            await process_channel(cid, eids)
+            await process_channel(bot, cid, eids)
 
     tasks = [limited_process(cid, eids) for cid, eids in react_config.items()]
     await asyncio.gather(*tasks)
