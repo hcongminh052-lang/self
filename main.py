@@ -8,6 +8,7 @@ import discord
 from discord.ext import commands
 from keep_alive import keep_alive
 from voice_task import voice_keepalive_loop, check_voice_status
+from react_task import process_channel, save_checkpoints, channel_checkpoints
 
 prefix = "!"
 intents = discord.Intents.all()
@@ -18,148 +19,12 @@ bot = commands.Bot(command_prefix=prefix,
                    intents=intents,
                    self_bot = True)
 channel_checkpoints = {}
-checkpoint_file = "checkpoints1.json"
 
 def shutdown_handler():
     print("Saving checkpoint before exit...")
     save_checkpoints()
 
 signal.signal(signal.SIGINT, lambda s, f: shutdown_handler())
-
-def load_checkpoints():
-    if os.path.exists(checkpoint_file):
-        with open(checkpoint_file, "r") as f:
-            return json.load(f)
-    return {}
-
-def save_checkpoints():
-    with open(checkpoint_file, "w") as f:
-        json.dump(channel_checkpoints, f)
-
-channel_checkpoints = load_checkpoints()
-
-current_delay = 0.35
-min_delay = 0.2
-max_delay = 1.5
-
-async def safe_add_reaction(msg, em, channel_id):
-    global current_delay
-
-    for lan_thu in range(5):
-        try:
-            await msg.add_reaction(em)
-            print(f"[{channel_id}] + {em} -> {msg.id}")
-
-            current_delay = max(current_delay * 1.01, 1.1)
-            await asyncio.sleep(current_delay + random.uniform(0.2, 0.6))
-            return True
-
-        except discord.HTTPException as e:
-
-            # RATE LIMIT
-            if e.status == 429:
-                wait_time = getattr(e, "retry_after", 2)
-                current_delay = min(current_delay * 1.35, max_delay)
-
-                print(f"[{channel_id}] ⏳ RATE LIMIT {wait_time}s | delay={round(current_delay,2)}")
-                await asyncio.sleep(wait_time + random.uniform(1, 2))
-                continue
-
-            # MESSAGE KHÔNG CHO REACT / LOCK / PERMISSION RIÊNG
-            elif e.status == 403:
-                print(f"[{channel_id}] 🚫 403 skip msg {msg.id}")
-                await asyncio.sleep(random.uniform(1.5, 2.5))
-                return False
-
-            # UNKNOWN MESSAGE / MESSAGE DIE
-            elif e.status == 404:
-                print(f"[{channel_id}] ❓ 404 msg mất {msg.id}")
-                return False
-
-            if "cloudflare" in str(e).lower():
-                print(f"[{channel_id}] ☁️ Cloudflare ngủ 90s")
-                await asyncio.sleep(90)
-                return False
-
-            print(f"[{channel_id}] HTTP {e.status}: {e}")
-            return False
-
-        except Exception as e:
-            print(f"[{channel_id}] Lỗi khác {e}")
-            return False
-
-    return False
-
-async def process_channel(channel_id, emoji_ids):
-    global channel_checkpoints
-    channel = bot.get_channel(channel_id)
-    if not channel:
-        print("Khong tim thay kenh:", channel_id)
-        return
-
-    data = channel_checkpoints.get(str(channel_id), {})
-    if isinstance(data, dict):
-        last_message_id = data.get("last_id")
-        emoji_index = data.get("emoji_index", 0)
-    else:
-        last_message_id = data
-        emoji_index = 0
-
-    BATCH_SIZE = 2
-    emoji_batch_raw = emoji_ids[emoji_index:emoji_index + BATCH_SIZE]
-    emoji_batch = []
-    for eid in emoji_batch_raw:
-        if isinstance(eid, str):
-            emoji_batch.append(eid)
-        else:
-            em = bot.get_emoji(eid)
-            if em:
-                emoji_batch.append(em)
-            else:
-                print(f"[{channel_id}] ❌ Emoji lỗi: {eid}")
-
-    print(f"[{channel_id}] Emoji batch: {emoji_batch}")
-    if last_message_id and str(last_message_id).isdigit():
-        history = channel.history(
-            limit=1000,
-            before=discord.Object(id=int(last_message_id))
-        )
-        print(f"[{channel_id}] Resume từ {last_message_id}")
-    else:
-        history = channel.history(limit=1000)
-        print(f"[{channel_id}] Quét mới")
-
-    new_checkpoint = last_message_id
-    tong_quet = 0
-    async for msg in history:
-        new_checkpoint = msg.id
-        tong_quet += 1
-        my_reactions = [str(r.emoji) for r in msg.reactions if r.me]
-        for em in emoji_batch:
-            if str(em) in my_reactions:
-                continue
-
-            await safe_add_reaction(msg, em, channel_id)
-
-        await asyncio.sleep(random.uniform(0.2, 0.5))
-        if tong_quet % 20 == 0:
-            channel_checkpoints[str(channel_id)] = {
-                "last_id": str(new_checkpoint),
-                "emoji_index": emoji_index
-            }
-            save_checkpoints()
-            print(f"[{channel_id}] 💾 Saved checkpoint {new_checkpoint}")
-
-    next_index = emoji_index + BATCH_SIZE
-    if next_index >= len(emoji_ids):
-        next_index = 0
-
-    channel_checkpoints[str(channel_id)] = {
-        "last_id": str(new_checkpoint),
-        "emoji_index": next_index
-    }
-    save_checkpoints()
-    print(f"[{channel_id}] ✅ DONE | next emoji index: {next_index}")
 
 def listToString(s):
     str1 = ""
