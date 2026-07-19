@@ -59,7 +59,6 @@ async def cmd(ctx):
 @bot.event
 async def on_ready():
     print(f'✅ Bot {bot.user} đã lên sóng!')
-    # Khởi động vòng lặp kiểm tra voice nếu nó chưa chạy
     if not voice_keepalive_loop.is_running():
         voice_keepalive_loop.start(bot)
 
